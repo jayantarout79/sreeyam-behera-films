@@ -5,13 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import type { WeddingInvite, CustomColors, RsvpInfo } from "@/types/database";
 import { Calendar, Clock, MapPin, Heart, Share2, Copy, Check, Camera } from "lucide-react";
 
-// Slide layout (6 total):
-//   0 → photo_1_url full-bleed  →  names + tagline
-//   1 → template bg slide-1-hero →  "You're Invited" / event header
-//   2 → template bg slide-2-venue → venue & date details
-//   3 → template bg slide-3-story → couple story
-//   4 → template bg slide-4-closing → RSVP
-//   5 → photo_2_url full-bleed  →  closing message + branding
+// ── Constants ──────────────────────────────────────────────────────────────────
 
 const BG_FOLDERS: Record<number, string> = {
   1: "template-1-romantic-elegant",
@@ -30,29 +24,35 @@ const SLIDE_BG_FILES = [
 ] as const;
 
 const TOTAL_SLIDES = 6;
-const TRANSITION_MS = 620;
 
-const slideVariants = {
-  enter: (dir: number) => ({ y: dir > 0 ? "100%" : "-100%", opacity: 0 }),
-  center: { y: "0%", opacity: 1 },
-  exit: (dir: number) => ({ y: dir > 0 ? "-100%" : "100%", opacity: 0 }),
-};
-const slideTransition = {
-  duration: TRANSITION_MS / 1000,
-  ease: [0.32, 0.72, 0, 1] as [number, number, number, number],
-};
+// Stable seeded pseudo-random (no hydration mismatch)
+function sr(seed: number, max = 1, min = 0) {
+  const x = Math.sin(seed * 9301 + 49297) * 233280;
+  return min + ((x - Math.floor(x)) * (max - min));
+}
+
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 interface InviteViewProps {
   invite: WeddingInvite;
   colors: CustomColors;
 }
 
+interface SharedProps {
+  invite: WeddingInvite;
+  colors: CustomColors;
+  formattedDate: string;
+  formattedTime: string | null;
+  rsvp: RsvpInfo | null;
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
+
 export default function InviteView({ invite, colors }: InviteViewProps) {
+  const [opened, setOpened] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [direction, setDirection] = useState(1);
   const [copied, setCopied] = useState(false);
-  const isAnimating = useRef(false);
-  const startY = useRef<number | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/invites/view", {
@@ -64,31 +64,23 @@ export default function InviteView({ invite, colors }: InviteViewProps) {
 
   const bgFolder = invite.template_id ? (BG_FOLDERS[invite.template_id] ?? null) : null;
 
-  // Slides 1-4 (indices 1-4) map to the 4 template bg images
   function templateBgUrl(slideIndex: number): string | null {
     if (!bgFolder || slideIndex < 1 || slideIndex > 4) return null;
     return `/invite-backgrounds/${bgFolder}/${SLIDE_BG_FILES[slideIndex - 1]}.png`;
   }
 
-  function goTo(next: number) {
-    if (isAnimating.current || next < 0 || next >= TOTAL_SLIDES) return;
-    isAnimating.current = true;
-    setDirection(next > currentSlide ? 1 : -1);
-    setCurrentSlide(next);
-    setTimeout(() => { isAnimating.current = false; }, TRANSITION_MS + 60);
+  function handleScroll() {
+    const el = scrollRef.current;
+    if (!el) return;
+    const slide = Math.round(el.scrollTop / el.clientHeight);
+    if (slide !== currentSlide) setCurrentSlide(slide);
   }
 
-  function onTouchStart(e: React.TouchEvent) { startY.current = e.touches[0].clientY; }
-  function onTouchEnd(e: React.TouchEvent) {
-    if (startY.current === null) return;
-    const delta = startY.current - e.changedTouches[0].clientY;
-    startY.current = null;
-    if (Math.abs(delta) < 60) return;
-    goTo(delta > 0 ? currentSlide + 1 : currentSlide - 1);
-  }
-  function onWheel(e: React.WheelEvent) {
-    if (Math.abs(e.deltaY) < 20) return;
-    goTo(e.deltaY > 0 ? currentSlide + 1 : currentSlide - 1);
+  function goTo(index: number) {
+    scrollRef.current?.scrollTo({
+      top: index * (scrollRef.current.clientHeight),
+      behavior: "smooth",
+    });
   }
 
   async function copyLink() {
@@ -96,6 +88,7 @@ export default function InviteView({ invite, colors }: InviteViewProps) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
+
   function shareWhatsApp() {
     window.open(
       `https://wa.me/?text=${encodeURIComponent(
@@ -115,155 +108,473 @@ export default function InviteView({ invite, colors }: InviteViewProps) {
     : null;
   const rsvp = invite.rsvp_info as RsvpInfo | null;
 
-  const sharedProps = { invite, colors, formattedDate, formattedTime, rsvp };
+  const shared: SharedProps = { invite, colors, formattedDate, formattedTime, rsvp };
 
   return (
-    <div className="flex items-center justify-center min-h-screen" style={{ background: "#0B0F19" }}>
-      <div
-        className="relative overflow-hidden select-none"
-        style={{
-          width: "min(100vw, 430px)",
-          height: "min(100svh, calc(min(100vw, 430px) * 16 / 9))",
-          maxHeight: "100svh",
-        }}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-        onWheel={onWheel}
-      >
-        <AnimatePresence initial={false} custom={direction}>
-          <motion.div
-            key={currentSlide}
-            custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={slideTransition}
-            className="absolute inset-0"
-          >
-            {currentSlide === 0 && (
-              <Slide0Photo {...sharedProps} />
-            )}
-            {currentSlide >= 1 && currentSlide <= 4 && (
-              <SlideTemplate
-                slideIndex={currentSlide}
-                bgUrl={templateBgUrl(currentSlide)}
-                {...sharedProps}
-              />
-            )}
-            {currentSlide === 5 && (
-              <Slide5Closing {...sharedProps} />
-            )}
-          </motion.div>
-        </AnimatePresence>
+    <>
+      {/* Global keyframes injected once */}
+      <style>{`
+        .invite-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+        .invite-scroll::-webkit-scrollbar { display: none; }
 
-        {/* Dot indicators */}
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-20">
-          {Array.from({ length: TOTAL_SLIDES }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => goTo(i)}
-              className="rounded-full transition-all duration-300"
-              style={{
-                width: i === currentSlide ? 7 : 4,
-                height: i === currentSlide ? 7 : 4,
-                background: i === currentSlide ? colors.primary : "rgba(255,255,255,0.35)",
-              }}
-              aria-label={`Slide ${i + 1}`}
-            />
-          ))}
-        </div>
+        @keyframes floatHeart {
+          0%   { transform: translateY(0)    translateX(0px)              scale(0.6); opacity: 0;   }
+          15%  { opacity: 0.75; }
+          85%  { opacity: 0.3; }
+          100% { transform: translateY(-420px) translateX(var(--hx, 0px)) scale(0.3); opacity: 0; }
+        }
+        @keyframes floatStar {
+          0%   { transform: translateY(0) scale(0.5) rotate(0deg);   opacity: 0; }
+          15%  { opacity: 0.85; }
+          100% { transform: translateY(-380px) scale(0.2) rotate(180deg); opacity: 0; }
+        }
+        @keyframes floatPetal {
+          0%   { transform: translateY(0)    rotate(0deg)   scale(0.7); opacity: 0; }
+          20%  { opacity: 0.7; }
+          100% { transform: translateY(-360px) rotate(120deg) scale(0.3); opacity: 0; }
+        }
+        @keyframes sealPulse {
+          0%, 100% { box-shadow: 0 0 0 0 var(--seal-glow); }
+          50%       { box-shadow: 0 0 0 18px transparent; }
+        }
+        @keyframes shimmer {
+          0%   { background-position: -200% center; }
+          100% { background-position:  200% center; }
+        }
+      `}</style>
 
-        {/* Slide counter */}
+      <div className="flex items-center justify-center min-h-screen" style={{ background: "#0B0F19" }}>
         <div
-          className="absolute top-4 left-4 z-20 text-[10px] font-medium tabular-nums tracking-widest"
-          style={{ color: "rgba(255,255,255,0.4)" }}
-        >
-          {currentSlide + 1} / {TOTAL_SLIDES}
-        </div>
-
-        {/* Share bar */}
-        <div
-          className="absolute bottom-0 inset-x-0 z-20 flex items-center justify-center gap-6 px-6"
+          className="relative overflow-hidden"
           style={{
-            paddingBottom: "max(16px, env(safe-area-inset-bottom))",
-            paddingTop: 14,
-            background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%)",
+            width: "min(100vw, 430px)",
+            height: "min(100svh, calc(min(100vw, 430px) * 16 / 9))",
+            maxHeight: "100svh",
           }}
         >
-          <ShareButton icon={<WhatsAppIcon />} label="WhatsApp" onClick={shareWhatsApp} color="#25D366" />
-          <ShareButton
-            icon={copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            label={copied ? "Copied!" : "Copy Link"}
-            onClick={copyLink}
-            color={colors.primary}
-          />
-          <ShareButton
-            icon={<Share2 className="h-4 w-4" />}
-            label="Share"
-            onClick={async () => {
-              if (navigator.share) {
-                await navigator.share({
-                  title: `${invite.bride_name} & ${invite.groom_name}'s Wedding`,
-                  url: window.location.href,
-                }).catch(() => {});
-              } else copyLink();
+          {/* ── Scrollable slide strip ─────────────────────────────── */}
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="invite-scroll absolute inset-0"
+            style={{
+              overflowY: opened ? "scroll" : "hidden",
+              scrollSnapType: "y mandatory",
+              scrollBehavior: "smooth",
             }}
-            color="rgba(255,255,255,0.55)"
-          />
-        </div>
-
-        {/* Swipe hint on slide 0 */}
-        {currentSlide === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 2.5, duration: 0.8 }}
-            className="absolute bottom-20 inset-x-0 flex flex-col items-center gap-1 z-20 pointer-events-none"
           >
-            <motion.div
-              animate={{ y: [0, 8, 0] }}
-              transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
+            {Array.from({ length: TOTAL_SLIDES }, (_, i) => (
+              <div
+                key={i}
+                style={{
+                  height: "100%",
+                  scrollSnapAlign: "start",
+                  position: "relative",
+                  overflow: "hidden",
+                  flexShrink: 0,
+                }}
+              >
+                {/* Per-slide floating particles */}
+                <FloatingParticles slideIndex={i} colors={colors} />
+
+                {i === 0 && <Slide0Photo {...shared} />}
+                {i >= 1 && i <= 4 && (
+                  <SlideTemplate
+                    slideIndex={i}
+                    bgUrl={templateBgUrl(i)}
+                    {...shared}
+                  />
+                )}
+                {i === 5 && <Slide5Closing {...shared} />}
+              </div>
+            ))}
+          </div>
+
+          {/* ── Dot indicators ─────────────────────────────────────── */}
+          {opened && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-20 pointer-events-auto">
+              {Array.from({ length: TOTAL_SLIDES }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => goTo(i)}
+                  className="rounded-full transition-all duration-300"
+                  style={{
+                    width: i === currentSlide ? 7 : 4,
+                    height: i === currentSlide ? 7 : 4,
+                    background: i === currentSlide ? colors.primary : "rgba(255,255,255,0.3)",
+                  }}
+                  aria-label={`Slide ${i + 1}`}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* ── Slide counter ──────────────────────────────────────── */}
+          {opened && (
+            <div
+              className="absolute top-4 left-4 z-20 text-[10px] font-medium tabular-nums tracking-widest"
+              style={{ color: "rgba(255,255,255,0.4)" }}
             >
-              <ChevronDown style={{ color: colors.primary }} />
+              {currentSlide + 1} / {TOTAL_SLIDES}
+            </div>
+          )}
+
+          {/* ── Share bar ──────────────────────────────────────────── */}
+          {opened && (
+            <div
+              className="absolute bottom-0 inset-x-0 z-20 flex items-center justify-center gap-6 px-6"
+              style={{
+                paddingBottom: "max(16px, env(safe-area-inset-bottom))",
+                paddingTop: 14,
+                background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 100%)",
+              }}
+            >
+              <ShareButton icon={<WhatsAppIcon />} label="WhatsApp" onClick={shareWhatsApp} color="#25D366" />
+              <ShareButton
+                icon={copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                label={copied ? "Copied!" : "Copy Link"}
+                onClick={copyLink}
+                color={colors.primary}
+              />
+              <ShareButton
+                icon={<Share2 className="h-4 w-4" />}
+                label="Share"
+                onClick={async () => {
+                  if (navigator.share) {
+                    await navigator.share({
+                      title: `${invite.bride_name} & ${invite.groom_name}'s Wedding`,
+                      url: window.location.href,
+                    }).catch(() => {});
+                  } else copyLink();
+                }}
+                color="rgba(255,255,255,0.5)"
+              />
+            </div>
+          )}
+
+          {/* ── Swipe hint (slide 0 only) ──────────────────────────── */}
+          {opened && currentSlide === 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 2, duration: 0.8 }}
+              className="absolute bottom-20 inset-x-0 flex flex-col items-center gap-1 z-20 pointer-events-none"
+            >
+              <motion.div
+                animate={{ y: [0, 8, 0] }}
+                transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
+              >
+                <ChevronDown style={{ color: colors.primary }} />
+              </motion.div>
+              <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+                Swipe to explore
+              </span>
             </motion.div>
-            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>
-              Swipe to explore
+          )}
+
+          {/* ── Entry / reveal screen ──────────────────────────────── */}
+          <AnimatePresence>
+            {!opened && (
+              <motion.div
+                key="entry"
+                className="absolute inset-0 z-30"
+                exit={{ opacity: 0, scale: 1.06, filter: "blur(6px)" }}
+                transition={{ duration: 0.75, ease: [0.32, 0.72, 0, 1] }}
+              >
+                <EntrySeal
+                  invite={invite}
+                  colors={colors}
+                  onOpen={() => setOpened(true)}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Entry seal screen ──────────────────────────────────────────────────────────
+
+function EntrySeal({
+  invite,
+  colors,
+  onOpen,
+}: {
+  invite: WeddingInvite;
+  colors: CustomColors;
+  onOpen: () => void;
+}) {
+  const [tapped, setTapped] = useState(false);
+
+  function handleTap() {
+    if (tapped) return;
+    setTapped(true);
+    setTimeout(onOpen, 120);
+  }
+
+  const initials =
+    (invite.bride_name?.[0] ?? "") + "&" + (invite.groom_name?.[0] ?? "");
+
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-between py-16 px-8">
+      {/* Background — photo or gradient */}
+      {invite.photo_1_url ? (
+        <img
+          src={invite.photo_1_url}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      ) : (
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `radial-gradient(ellipse at 40% 30%, ${colors.primary}55 0%, transparent 60%),
+              linear-gradient(160deg, ${colors.accent} 0%, #0B0F19 65%)`,
+          }}
+        />
+      )}
+
+      {/* Heavy dark overlay */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.65) 100%)",
+        }}
+      />
+
+      {/* Top — studio mark */}
+      <motion.div
+        initial={{ opacity: 0, y: -14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, delay: 0.15 }}
+        className="relative z-10 flex flex-col items-center gap-1"
+      >
+        <p className="text-[9px] tracking-[0.5em] uppercase" style={{ color: colors.primary }}>
+          Wedding Invitation
+        </p>
+      </motion.div>
+
+      {/* Center — names */}
+      <div className="relative z-10 flex flex-col items-center text-center">
+        <motion.h1
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.75, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          style={{ fontFamily: "Georgia, serif", fontSize: "clamp(2.8rem, 11vw, 4rem)", lineHeight: 1.05 }}
+          className="font-bold text-white"
+        >
+          {invite.bride_name}
+        </motion.h1>
+
+        <motion.span
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.55, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="block my-2 italic font-normal"
+          style={{ fontFamily: "Georgia, serif", fontSize: "clamp(1.6rem, 6.5vw, 2.4rem)", color: colors.primary }}
+        >
+          &amp;
+        </motion.span>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.75, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          style={{ fontFamily: "Georgia, serif", fontSize: "clamp(2.8rem, 11vw, 4rem)", lineHeight: 1.05 }}
+          className="font-bold text-white"
+        >
+          {invite.groom_name}
+        </motion.h1>
+
+        <motion.div
+          initial={{ opacity: 0, scaleX: 0 }}
+          animate={{ opacity: 1, scaleX: 1 }}
+          transition={{ duration: 0.5, delay: 0.65 }}
+          className="mt-5 mb-4 flex items-center gap-3"
+        >
+          <div className="h-px w-14" style={{ background: colors.primary, opacity: 0.45 }} />
+          <Heart className="h-3 w-3" style={{ color: colors.primary }} fill="currentColor" />
+          <div className="h-px w-14" style={{ background: colors.primary, opacity: 0.45 }} />
+        </motion.div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.75, duration: 0.6 }}
+          className="text-sm"
+          style={{ fontFamily: "Georgia, serif", color: "rgba(255,255,255,0.65)" }}
+        >
+          {new Date(invite.event_date).toLocaleDateString("en-IN", {
+            day: "numeric", month: "long", year: "numeric",
+          })}
+        </motion.p>
+      </div>
+
+      {/* Bottom — wax seal tap button */}
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10 flex flex-col items-center gap-4"
+      >
+        <button
+          onClick={handleTap}
+          className="relative flex items-center justify-center active:scale-95 transition-transform duration-150"
+          style={{ width: 110, height: 110 }}
+          aria-label="Open invitation"
+        >
+          {/* Rotating ring with text */}
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
+            className="absolute inset-0"
+          >
+            <svg viewBox="0 0 110 110" width="110" height="110">
+              <defs>
+                <path
+                  id="seal-circle"
+                  d="M55,12 a43,43 0 1,1 -0.01,0"
+                  fill="none"
+                />
+              </defs>
+              <text
+                fontSize="8.5"
+                fontWeight="600"
+                letterSpacing="3.2"
+                style={{ fill: colors.primary, fontFamily: "Georgia, serif" }}
+              >
+                <textPath href="#seal-circle">
+                  TAP TO OPEN · TAP TO OPEN · &nbsp;
+                </textPath>
+              </text>
+            </svg>
+          </motion.div>
+
+          {/* Inner seal disc */}
+          <motion.div
+            animate={{ scale: [1, 1.04, 1] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+            className="relative flex flex-col items-center justify-center rounded-full"
+            style={{
+              width: 72,
+              height: 72,
+              background: `${colors.primary}22`,
+              border: `1.5px solid ${colors.primary}`,
+              "--seal-glow": `${colors.primary}55`,
+              animation: "sealPulse 2.4s ease-in-out infinite",
+            } as React.CSSProperties}
+          >
+            {/* Initials */}
+            <span
+              style={{
+                fontFamily: "Georgia, serif",
+                fontSize: 18,
+                fontWeight: 700,
+                color: colors.primary,
+                letterSpacing: "0.05em",
+                lineHeight: 1,
+              }}
+            >
+              {initials}
             </span>
           </motion.div>
-        )}
-      </div>
+        </button>
+
+        <motion.p
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+          className="text-[10px] tracking-[0.3em] uppercase"
+          style={{ color: "rgba(255,255,255,0.5)" }}
+        >
+          Touch to open
+        </motion.p>
+      </motion.div>
+
+      {/* Floating hearts on entry screen too */}
+      <FloatingParticles slideIndex={0} colors={colors} />
     </div>
   );
 }
 
-// ── Shared props ──────────────────────────────────────────────────────────────
+// ── Floating particles ─────────────────────────────────────────────────────────
 
-interface SharedProps {
-  invite: WeddingInvite;
-  colors: CustomColors;
-  formattedDate: string;
-  formattedTime: string | null;
-  rsvp: RsvpInfo | null;
+const PARTICLE_ANIM = ["floatHeart", "floatHeart", "floatStar", "floatPetal", "floatHeart", "floatHeart"];
+const PARTICLE_SIZE = [
+  [8, 16], [8, 14], [6, 12], [9, 15], [8, 14], [10, 18],
+];
+
+function FloatingParticles({ slideIndex, colors }: { slideIndex: number; colors: CustomColors }) {
+  const count = 7;
+  const animName = PARTICLE_ANIM[slideIndex] ?? "floatHeart";
+  const [sizeMin, sizeMax] = PARTICLE_SIZE[slideIndex] ?? [8, 16];
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
+      {Array.from({ length: count }, (_, i) => {
+        const left    = sr(slideIndex * 200 + i * 31, 88, 6);
+        const delay   = sr(slideIndex * 200 + i * 17, 5, 0);
+        const dur     = sr(slideIndex * 200 + i * 23, 3, 3.5);
+        const size    = sr(slideIndex * 200 + i * 37, sizeMax - sizeMin, sizeMin);
+        const drift   = sr(slideIndex * 200 + i * 41, 60, -30);
+        const opacity = sr(slideIndex * 200 + i * 13, 0.4, 0.55);
+
+        const isHeart = animName === "floatHeart";
+        const isStar  = animName === "floatStar";
+
+        return (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left: `${left}%`,
+              bottom: -24,
+              "--hx": `${drift}px`,
+              animationName: animName,
+              animationDuration: `${dur}s`,
+              animationDelay: `${delay}s`,
+              animationTimingFunction: "ease-out",
+              animationIterationCount: "infinite",
+              animationFillMode: "both",
+              opacity,
+            } as React.CSSProperties}
+          >
+            {isHeart && (
+              <svg width={size} height={size} viewBox="0 0 24 24" fill={colors.primary}>
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            )}
+            {isStar && (
+              <svg width={size} height={size} viewBox="0 0 24 24" fill={colors.primary}>
+                <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
+              </svg>
+            )}
+            {!isHeart && !isStar && (
+              // Petal — simple ellipse
+              <svg width={size} height={size * 1.4} viewBox="0 0 14 20" fill={colors.primary} opacity="0.7">
+                <ellipse cx="7" cy="10" rx="5" ry="9" />
+              </svg>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
-// ── Slide 0: Photo 1 full-bleed — names + tagline ────────────────────────────
+// ── Slide 0: Photo 1 full-bleed — names + tagline ─────────────────────────────
 
 function Slide0Photo({ invite, colors }: SharedProps) {
-  const tagline = (() => {
-    if (invite.couple_story && invite.couple_story.length <= 65) return invite.couple_story;
-    return "Two hearts. One beautiful beginning.";
-  })();
+  const tagline = invite.couple_story && invite.couple_story.length <= 65
+    ? invite.couple_story
+    : "Two hearts. One beautiful beginning.";
 
   return (
     <div className="absolute inset-0">
-      {/* Photo or deep gradient background */}
       {invite.photo_1_url ? (
-        <img
-          src={invite.photo_1_url}
-          alt="Couple"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
+        <img src={invite.photo_1_url} alt="Couple" className="absolute inset-0 w-full h-full object-cover" />
       ) : (
         <div
           className="absolute inset-0"
@@ -273,36 +584,24 @@ function Slide0Photo({ invite, colors }: SharedProps) {
           }}
         />
       )}
-
-      {/* Gradient darkening — top fade + heavy bottom */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.05) 45%, rgba(0,0,0,0.82) 100%)",
+            "linear-gradient(to bottom, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.04) 35%, rgba(0,0,0,0.04) 45%, rgba(0,0,0,0.85) 100%)",
         }}
       />
-
-      {/* Names block — bottom anchored */}
       <div className="absolute bottom-28 inset-x-0 flex flex-col items-center text-center px-8 z-10">
-        <motion.p
-          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="text-[10px] tracking-[0.4em] uppercase mb-5"
-          style={{ color: colors.primary }}
-        >
+        <motion.p {...up(0)} className="text-[10px] tracking-[0.4em] uppercase mb-5" style={{ color: colors.primary }}>
           Together with their families
         </motion.p>
-
         <motion.h1
-          initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          {...up(0.1)}
           style={{ fontFamily: "Georgia, serif", fontSize: "clamp(2.6rem, 10vw, 3.8rem)", lineHeight: 1 }}
           className="font-bold text-white"
         >
           {invite.bride_name}
         </motion.h1>
-
         <motion.span
           initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.55, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
@@ -311,31 +610,24 @@ function Slide0Photo({ invite, colors }: SharedProps) {
         >
           &amp;
         </motion.span>
-
         <motion.h1
-          initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          {...up(0.3)}
           style={{ fontFamily: "Georgia, serif", fontSize: "clamp(2.6rem, 10vw, 3.8rem)", lineHeight: 1 }}
           className="font-bold text-white"
         >
           {invite.groom_name}
         </motion.h1>
-
-        {/* Ornament divider */}
         <motion.div
           initial={{ opacity: 0, scaleX: 0 }} animate={{ opacity: 1, scaleX: 1 }}
-          transition={{ duration: 0.6, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-6 mb-4 flex items-center gap-3 w-full justify-center"
+          transition={{ duration: 0.6, delay: 0.45 }}
+          className="mt-6 mb-4 flex items-center gap-3 justify-center"
         >
-          <div className="h-px flex-1 max-w-16" style={{ background: colors.primary, opacity: 0.5 }} />
+          <div className="h-px w-16 max-w-16" style={{ background: colors.primary, opacity: 0.5 }} />
           <Heart className="h-3 w-3 flex-shrink-0" style={{ color: colors.primary }} fill="currentColor" />
-          <div className="h-px flex-1 max-w-16" style={{ background: colors.primary, opacity: 0.5 }} />
+          <div className="h-px w-16 max-w-16" style={{ background: colors.primary, opacity: 0.5 }} />
         </motion.div>
-
-        {/* Tagline */}
         <motion.p
-          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.65, delay: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          {...up(0.55)}
           className="text-sm italic leading-snug max-w-[220px]"
           style={{ fontFamily: "Georgia, serif", color: "rgba(255,255,255,0.75)" }}
         >
@@ -346,31 +638,27 @@ function Slide0Photo({ invite, colors }: SharedProps) {
   );
 }
 
-// ── Slides 1–4: Template backgrounds + content ────────────────────────────────
+// ── Slides 1–4: Template backgrounds ─────────────────────────────────────────
 
 interface SlideTemplateProps extends SharedProps {
   slideIndex: number;
   bgUrl: string | null;
 }
 
-function SlideTemplate({ slideIndex, bgUrl, invite, colors, formattedDate, formattedTime }: SlideTemplateProps) {
+function SlideTemplate({ slideIndex, bgUrl, invite, colors, formattedDate, formattedTime, rsvp }: SlideTemplateProps) {
   const [bgLoaded, setBgLoaded] = useState(false);
   const [bgFailed, setBgFailed] = useState(false);
 
-  const gradientFallbacks = [
+  const fallbacks = [
     `linear-gradient(160deg, ${darken(colors.primary)} 0%, #0B0F19 100%)`,
     `linear-gradient(145deg, ${colors.secondary} 0%, ${darken(colors.secondary)} 100%)`,
     `linear-gradient(160deg, ${colors.accent} 0%, #0B0F19 100%)`,
     `linear-gradient(145deg, ${colors.primary} 0%, ${darken(colors.primary)} 100%)`,
   ];
-  const fallback = gradientFallbacks[slideIndex - 1] ?? gradientFallbacks[0];
   const useBg = bgUrl && !bgFailed;
 
   return (
-    <div
-      className="absolute inset-0"
-      style={{ background: useBg && bgLoaded ? undefined : fallback }}
-    >
+    <div className="absolute inset-0" style={{ background: useBg && bgLoaded ? undefined : fallbacks[slideIndex - 1] }}>
       {useBg && (
         <img
           src={bgUrl}
@@ -380,59 +668,41 @@ function SlideTemplate({ slideIndex, bgUrl, invite, colors, formattedDate, forma
           onError={() => setBgFailed(true)}
         />
       )}
-      {/* Dark overlay for readability */}
-      {(useBg && bgLoaded) && (
+      {useBg && bgLoaded && (
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.62) 100%)" }}
+          style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 100%)" }}
         />
       )}
-
       <div className="absolute inset-0 z-10">
-        {slideIndex === 1 && <TemplateSlide1Content invite={invite} colors={colors} formattedDate={formattedDate} />}
-        {slideIndex === 2 && <TemplateSlide2Content invite={invite} colors={colors} formattedDate={formattedDate} formattedTime={formattedTime} />}
-        {slideIndex === 3 && <TemplateSlide3Content invite={invite} colors={colors} />}
-        {slideIndex === 4 && <TemplateSlide4Content invite={invite} colors={colors} formattedDate={formattedDate} rsvp={invite.rsvp_info as RsvpInfo | null} />}
+        {slideIndex === 1 && <TSlide1 invite={invite} colors={colors} formattedDate={formattedDate} />}
+        {slideIndex === 2 && <TSlide2 invite={invite} colors={colors} formattedDate={formattedDate} formattedTime={formattedTime} />}
+        {slideIndex === 3 && <TSlide3 invite={invite} colors={colors} />}
+        {slideIndex === 4 && <TSlide4 invite={invite} colors={colors} formattedDate={formattedDate} rsvp={rsvp} />}
       </div>
     </div>
   );
 }
 
-// Slide 1 of 6 (template bg 1): "You're Invited" — event highlight
-function TemplateSlide1Content({ invite, colors, formattedDate }: {
-  invite: WeddingInvite; colors: CustomColors; formattedDate: string;
-}) {
+function TSlide1({ invite, colors, formattedDate }: { invite: WeddingInvite; colors: CustomColors; formattedDate: string }) {
   return (
     <div className="h-full flex flex-col items-center justify-center text-center px-8">
-      <motion.p {...up(0)} className="text-[9px] tracking-[0.5em] uppercase mb-6"
-        style={{ color: colors.primary }}>
+      <motion.p {...up(0)} className="text-[9px] tracking-[0.5em] uppercase mb-6" style={{ color: colors.primary }}>
         You are cordially invited
       </motion.p>
-      <motion.h2 {...up(0.1)}
-        className="text-4xl font-bold text-white leading-tight mb-2"
-        style={{ fontFamily: "Georgia, serif" }}>
+      <motion.h2 {...up(0.1)} className="text-4xl font-bold text-white leading-tight mb-2" style={{ fontFamily: "Georgia, serif" }}>
         {invite.bride_name}
       </motion.h2>
-      <motion.span {...up(0.18)}
-        className="block italic text-2xl font-normal my-1"
-        style={{ fontFamily: "Georgia, serif", color: colors.primary }}>
+      <motion.span {...up(0.18)} className="block italic text-2xl font-normal my-1" style={{ fontFamily: "Georgia, serif", color: colors.primary }}>
         &amp;
       </motion.span>
-      <motion.h2 {...up(0.26)}
-        className="text-4xl font-bold text-white leading-tight mb-8"
-        style={{ fontFamily: "Georgia, serif" }}>
+      <motion.h2 {...up(0.26)} className="text-4xl font-bold text-white leading-tight mb-8" style={{ fontFamily: "Georgia, serif" }}>
         {invite.groom_name}
       </motion.h2>
-
       <motion.div {...up(0.38)} className="space-y-1">
-        <p className="text-lg font-semibold text-white" style={{ fontFamily: "Georgia, serif" }}>
-          {formattedDate}
-        </p>
-        <p className="text-xs tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.5)" }}>
-          Celebrate love with us
-        </p>
+        <p className="text-lg font-semibold text-white" style={{ fontFamily: "Georgia, serif" }}>{formattedDate}</p>
+        <p className="text-xs tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.5)" }}>Celebrate love with us</p>
       </motion.div>
-
       <motion.div {...up(0.5)} className="mt-10 flex items-center gap-3">
         <div className="h-px w-10" style={{ background: colors.primary, opacity: 0.5 }} />
         <Heart className="h-3.5 w-3.5" style={{ color: colors.primary }} fill="currentColor" />
@@ -442,68 +712,31 @@ function TemplateSlide1Content({ invite, colors, formattedDate }: {
   );
 }
 
-// Slide 2 of 6 (template bg 2): Venue & ceremony details
-function TemplateSlide2Content({ invite, colors, formattedDate, formattedTime }: {
-  invite: WeddingInvite; colors: CustomColors; formattedDate: string; formattedTime: string | null;
-}) {
+function TSlide2({ invite, colors, formattedDate, formattedTime }: { invite: WeddingInvite; colors: CustomColors; formattedDate: string; formattedTime: string | null }) {
   return (
     <div className="h-full flex flex-col items-center justify-center px-7 text-center">
-      <motion.p {...up(0)} className="text-[9px] tracking-[0.45em] uppercase mb-3"
-        style={{ color: colors.primary }}>
-        The Celebration
-      </motion.p>
-      <motion.h2 {...up(0.1)}
-        className="text-3xl font-bold text-white mb-8"
-        style={{ fontFamily: "Georgia, serif" }}>
-        Join Us
-      </motion.h2>
-
+      <motion.p {...up(0)} className="text-[9px] tracking-[0.45em] uppercase mb-3" style={{ color: colors.primary }}>The Celebration</motion.p>
+      <motion.h2 {...up(0.1)} className="text-3xl font-bold text-white mb-8" style={{ fontFamily: "Georgia, serif" }}>Join Us</motion.h2>
       <div className="space-y-3 w-full max-w-[260px]">
         <DetailRow icon={<Calendar className="h-4 w-4" />} label="Date" value={formattedDate} primary={colors.primary} delay={0.15} />
-        {formattedTime && (
-          <DetailRow icon={<Clock className="h-4 w-4" />} label="Time" value={formattedTime} primary={colors.primary} delay={0.25} />
-        )}
-        {invite.venue_name && (
-          <DetailRow icon={<MapPin className="h-4 w-4" />} label="Venue" value={invite.venue_name} primary={colors.primary} delay={0.35} />
-        )}
-        {invite.event_location && (
-          <DetailRow icon={<MapPin className="h-4 w-4" />} label="Address" value={invite.event_location} primary={colors.primary} delay={0.45} />
-        )}
+        {formattedTime && <DetailRow icon={<Clock className="h-4 w-4" />} label="Time" value={formattedTime} primary={colors.primary} delay={0.25} />}
+        {invite.venue_name && <DetailRow icon={<MapPin className="h-4 w-4" />} label="Venue" value={invite.venue_name} primary={colors.primary} delay={0.35} />}
+        {invite.event_location && <DetailRow icon={<MapPin className="h-4 w-4" />} label="Address" value={invite.event_location} primary={colors.primary} delay={0.45} />}
       </div>
     </div>
   );
 }
 
-// Slide 3 of 6 (template bg 3): Couple story
-function TemplateSlide3Content({ invite, colors }: {
-  invite: WeddingInvite; colors: CustomColors;
-}) {
+function TSlide3({ invite, colors }: { invite: WeddingInvite; colors: CustomColors }) {
   return (
     <div className="h-full flex flex-col items-center justify-center text-center px-8">
-      <motion.p {...up(0)} className="text-[9px] tracking-[0.45em] uppercase mb-4"
-        style={{ color: colors.primary }}>
-        Our Story
-      </motion.p>
-      <motion.h2 {...up(0.1)}
-        className="text-2xl font-bold text-white mb-6"
-        style={{ fontFamily: "Georgia, serif" }}>
+      <motion.p {...up(0)} className="text-[9px] tracking-[0.45em] uppercase mb-4" style={{ color: colors.primary }}>Our Story</motion.p>
+      <motion.h2 {...up(0.1)} className="text-2xl font-bold text-white mb-6" style={{ fontFamily: "Georgia, serif" }}>
         {invite.bride_name} &amp; {invite.groom_name}
       </motion.h2>
-
-      {invite.couple_story ? (
-        <motion.p {...up(0.22)}
-          className="text-base leading-relaxed italic max-w-xs text-white/85"
-          style={{ fontFamily: "Georgia, serif" }}>
-          &ldquo;{invite.couple_story}&rdquo;
-        </motion.p>
-      ) : (
-        <motion.p {...up(0.22)}
-          className="text-base leading-relaxed italic max-w-xs"
-          style={{ fontFamily: "Georgia, serif", color: "rgba(255,255,255,0.6)" }}>
-          &ldquo;Where two paths crossed and became one beautiful journey.&rdquo;
-        </motion.p>
-      )}
-
+      <motion.p {...up(0.22)} className="text-base leading-relaxed italic max-w-xs text-white/85" style={{ fontFamily: "Georgia, serif" }}>
+        &ldquo;{invite.couple_story || "Where two paths crossed and became one beautiful journey."}&rdquo;
+      </motion.p>
       <motion.div {...up(0.38)} className="mt-8 flex items-center gap-3">
         <div className="h-px w-8" style={{ background: colors.primary, opacity: 0.5 }} />
         <Heart className="h-3 w-3" style={{ color: colors.primary }} fill="currentColor" />
@@ -513,128 +746,60 @@ function TemplateSlide3Content({ invite, colors }: {
   );
 }
 
-// Slide 4 of 6 (template bg 4): RSVP
-function TemplateSlide4Content({ invite, colors, formattedDate, rsvp }: {
-  invite: WeddingInvite; colors: CustomColors; formattedDate: string; rsvp: RsvpInfo | null;
-}) {
+function TSlide4({ invite, colors, formattedDate, rsvp }: { invite: WeddingInvite; colors: CustomColors; formattedDate: string; rsvp: RsvpInfo | null }) {
   return (
     <div className="h-full flex flex-col items-center justify-center text-center px-8">
-      <motion.p {...up(0)} className="text-[9px] tracking-[0.45em] uppercase mb-4"
-        style={{ color: colors.primary }}>
-        RSVP
-      </motion.p>
-      <motion.h2 {...up(0.1)}
-        className="text-3xl font-bold text-white mb-2"
-        style={{ fontFamily: "Georgia, serif" }}>
-        We can&apos;t wait
-      </motion.h2>
-      <motion.p {...up(0.18)}
-        className="text-base italic text-white/70 mb-8"
-        style={{ fontFamily: "Georgia, serif" }}>
-        to celebrate with you.
-      </motion.p>
-
+      <motion.p {...up(0)} className="text-[9px] tracking-[0.45em] uppercase mb-4" style={{ color: colors.primary }}>RSVP</motion.p>
+      <motion.h2 {...up(0.1)} className="text-3xl font-bold text-white mb-2" style={{ fontFamily: "Georgia, serif" }}>We can&apos;t wait</motion.h2>
+      <motion.p {...up(0.18)} className="text-base italic text-white/70 mb-8" style={{ fontFamily: "Georgia, serif" }}>to celebrate with you.</motion.p>
       <motion.div {...up(0.3)} className="space-y-1 text-sm text-white/75 mb-8">
         <p style={{ fontFamily: "Georgia, serif" }}>{formattedDate}</p>
         {invite.venue_name && <p className="font-semibold text-white">{invite.venue_name}</p>}
         {invite.event_location && <p className="text-white/60 text-xs">{invite.event_location}</p>}
       </motion.div>
-
       {(rsvp?.phone || rsvp?.email) && (
         <motion.div {...up(0.45)}
           className="rounded-2xl px-7 py-5 space-y-1.5 w-full max-w-[240px]"
           style={{ background: "rgba(0,0,0,0.3)", backdropFilter: "blur(10px)", border: `1px solid ${colors.primary}33` }}>
-          <p className="text-[9px] tracking-widest uppercase mb-3" style={{ color: colors.primary }}>
-            Kindly respond
-          </p>
-          {rsvp.phone && (
-            <p className="text-xl font-bold text-white" style={{ fontFamily: "Georgia, serif" }}>
-              {rsvp.phone}
-            </p>
-          )}
-          {rsvp.email && (
-            <p className="text-xs text-white/60">{rsvp.email}</p>
-          )}
+          <p className="text-[9px] tracking-widest uppercase mb-3" style={{ color: colors.primary }}>Kindly respond</p>
+          {rsvp.phone && <p className="text-xl font-bold text-white" style={{ fontFamily: "Georgia, serif" }}>{rsvp.phone}</p>}
+          {rsvp.email && <p className="text-xs text-white/60">{rsvp.email}</p>}
         </motion.div>
       )}
     </div>
   );
 }
 
-// ── Slide 5: Photo 2 full-bleed — closing ────────────────────────────────────
+// ── Slide 5: Photo 2 closing ───────────────────────────────────────────────────
 
 function Slide5Closing({ invite, colors }: SharedProps) {
   return (
     <div className="absolute inset-0">
       {invite.photo_2_url ? (
-        <img
-          src={invite.photo_2_url}
-          alt="Couple"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
+        <img src={invite.photo_2_url} alt="Couple" className="absolute inset-0 w-full h-full object-cover" />
       ) : (
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `linear-gradient(145deg, ${colors.primary} 0%, ${darken(colors.primary)} 100%)`,
-          }}
-        />
+        <div className="absolute inset-0" style={{ background: `linear-gradient(145deg, ${colors.primary} 0%, ${darken(colors.primary)} 100%)` }} />
       )}
-
-      {/* Top + bottom gradient overlays */}
       <div
         className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.05) 55%, rgba(0,0,0,0.88) 100%)",
-        }}
+        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.58) 0%, rgba(0,0,0,0.04) 40%, rgba(0,0,0,0.04) 55%, rgba(0,0,0,0.9) 100%)" }}
       />
-
-      {/* Top — names reminder */}
-      <div className="absolute top-16 inset-x-0 text-center z-10 px-6">
-        <motion.p
-          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="text-[9px] tracking-[0.45em] uppercase"
-          style={{ color: colors.primary }}
-        >
+      <div className="absolute top-14 inset-x-0 text-center z-10 px-6">
+        <motion.p {...up(0)} className="text-[9px] tracking-[0.45em] uppercase" style={{ color: colors.primary }}>
           {invite.bride_name} &amp; {invite.groom_name}
         </motion.p>
       </div>
-
-      {/* Bottom — closing message + branding */}
       <div className="absolute bottom-24 inset-x-0 flex flex-col items-center text-center px-8 z-10">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-5"
-        >
+        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6 }} className="mb-5">
           <Heart className="h-8 w-8 text-white/80 mx-auto" fill="currentColor" />
         </motion.div>
-
-        <motion.h2
-          initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-          className="text-3xl font-bold text-white leading-tight"
-          style={{ fontFamily: "Georgia, serif" }}
-        >
+        <motion.h2 {...up(0.1)} className="text-3xl font-bold text-white leading-tight" style={{ fontFamily: "Georgia, serif" }}>
           See you there.
         </motion.h2>
-
-        <motion.p
-          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.65, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-2 text-base italic"
-          style={{ fontFamily: "Georgia, serif", color: "rgba(255,255,255,0.7)" }}
-        >
+        <motion.p {...up(0.22)} className="mt-2 text-base italic" style={{ fontFamily: "Georgia, serif", color: "rgba(255,255,255,0.7)" }}>
           With love &amp; joy
         </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.45 }}
-          className="mt-8 flex items-center gap-1.5 text-white/30 text-[10px]"
-        >
+        <motion.div {...up(0.45)} className="mt-8 flex items-center gap-1.5 text-white/30 text-[10px]">
           <Camera className="h-3 w-3" />
           <span>2soulfilms · Sreeyam Behera</span>
         </motion.div>
@@ -643,7 +808,7 @@ function Slide5Closing({ invite, colors }: SharedProps) {
   );
 }
 
-// ── Shared UI ─────────────────────────────────────────────────────────────────
+// ── Shared helpers ─────────────────────────────────────────────────────────────
 
 const up = (delay = 0) => ({
   initial: { opacity: 0, y: 22 },
@@ -665,12 +830,8 @@ function DetailRow({ icon, label, value, primary, delay = 0 }: {
         <div style={{ color: primary }}>{icon}</div>
       </div>
       <div className="min-w-0">
-        <p className="text-[9px] font-semibold tracking-widest uppercase mb-0.5" style={{ color: primary }}>
-          {label}
-        </p>
-        <p className="text-sm font-medium leading-snug" style={{ color: "#ffffff", fontFamily: "Georgia, serif" }}>
-          {value}
-        </p>
+        <p className="text-[9px] font-semibold tracking-widest uppercase mb-0.5" style={{ color: primary }}>{label}</p>
+        <p className="text-sm font-medium leading-snug" style={{ color: "#ffffff", fontFamily: "Georgia, serif" }}>{value}</p>
       </div>
     </motion.div>
   );
@@ -681,9 +842,7 @@ function ShareButton({ icon, label, onClick, color }: {
 }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-1 active:scale-95 transition-transform">
-      <div className="rounded-full p-2.5" style={{ background: "rgba(255,255,255,0.12)", color }}>
-        {icon}
-      </div>
+      <div className="rounded-full p-2.5" style={{ background: "rgba(255,255,255,0.12)", color }}>{icon}</div>
       <span className="text-[10px] text-white/45">{label}</span>
     </button>
   );
@@ -700,8 +859,7 @@ function WhatsAppIcon() {
 function ChevronDown({ style }: { style?: React.CSSProperties }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      style={style}>
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
       <polyline points="6 9 12 15 18 9" />
     </svg>
   );
@@ -709,6 +867,7 @@ function ChevronDown({ style }: { style?: React.CSSProperties }) {
 
 function darken(hex: string): string {
   const c = hex.replace("#", "");
+  if (c.length !== 6) return hex;
   const r = Math.round(parseInt(c.slice(0, 2), 16) * 0.65);
   const g = Math.round(parseInt(c.slice(2, 4), 16) * 0.65);
   const b = Math.round(parseInt(c.slice(4, 6), 16) * 0.65);
