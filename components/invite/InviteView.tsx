@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { WeddingInvite, CustomColors, RsvpInfo } from "@/types/database";
-import { Calendar, Clock, MapPin, Heart, Share2, Copy, Check, Camera } from "lucide-react";
+import { Calendar, Clock, MapPin, Heart, Share2, Copy, Check } from "lucide-react";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -208,16 +208,6 @@ export default function InviteView({ invite, colors }: InviteViewProps) {
                   aria-label={`Slide ${i + 1}`}
                 />
               ))}
-            </div>
-          )}
-
-          {/* ── Slide counter ──────────────────────────────────────── */}
-          {opened && (
-            <div
-              className="absolute top-4 left-4 z-20 text-[10px] font-medium tabular-nums tracking-widest"
-              style={{ color: "rgba(255,255,255,0.4)" }}
-            >
-              {currentSlide + 1} / {TOTAL_SLIDES}
             </div>
           )}
 
@@ -853,9 +843,16 @@ function Slide5Closing({ invite, colors }: SharedProps) {
         <motion.p {...up(0.22)} className="mt-2 text-base italic" style={{ fontFamily: "Georgia, serif", color: "rgba(255,255,255,0.7)" }}>
           With love &amp; joy
         </motion.p>
-        <motion.div {...up(0.45)} className="mt-8 flex items-center gap-1.5 text-white/30 text-[10px]">
-          <Camera className="h-3 w-3" />
-          <span>2soulfilms · Sreeyam Behera</span>
+        <motion.div {...up(0.45)} className="mt-8">
+          <a
+            href="https://www.2soulfilms.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] tracking-widest"
+            style={{ color: "rgba(255,255,255,0.25)", textDecoration: "none" }}
+          >
+            www.2soulfilms.com
+          </a>
         </motion.div>
       </div>
     </div>

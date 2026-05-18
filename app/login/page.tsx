@@ -72,8 +72,7 @@ function LoginForm() {
             className="text-5xl font-bold text-white mb-4 leading-tight"
             style={{ fontFamily: "var(--font-heading)" }}
           >
-            Sreeyam Behera
-            <span className="block text-gold">Films</span>
+            2soulfilms
           </h1>
           <p className="text-white/70 text-lg max-w-sm mx-auto leading-relaxed">
             Capturing love stories through timeless photography and cinematic moments.
@@ -97,7 +96,7 @@ function LoginForm() {
               className="text-xl font-bold text-charcoal"
               style={{ fontFamily: "var(--font-heading)" }}
             >
-              Sreeyam Behera Films
+              2soulfilms
             </span>
           </div>
 

@@ -104,7 +104,7 @@ export default function HeroSection() {
           >
             <div className="w-6 h-px bg-champagne/60" />
             <span className="text-[10px] font-semibold tracking-[0.45em] uppercase text-champagne/80">
-              Sreeyam Behera &nbsp;·&nbsp; Bhubaneswar
+              2soulfilms &nbsp;·&nbsp; Bhubaneswar
             </span>
           </motion.div>
 

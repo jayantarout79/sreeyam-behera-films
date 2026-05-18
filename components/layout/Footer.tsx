@@ -179,7 +179,7 @@ export default function Footer() {
 
         {/* ── Bottom bar ── */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/20">
-          <p>© {new Date().getFullYear()} 2soulfilms · Sreeyam Behera. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} 2soulfilms. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <Link href="#" className="hover:text-white/40 transition-colors">Privacy Policy</Link>
             <span className="text-white/10">|</span>

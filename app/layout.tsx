@@ -20,7 +20,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "2soulfilms — We Make Wedding Stories | Wedding Films",
   description:
-    "Beyond The Destination, You Can Always Memorize. Cinematic wedding films by Sreeyam Behera. Serving couples all over India.",
+    "Beyond The Destination, You Can Always Memorize. Cinematic wedding films by 2soulfilms. Serving couples all over India.",
   openGraph: {
     title: "2soulfilms — We Make Wedding Stories",
     description:
