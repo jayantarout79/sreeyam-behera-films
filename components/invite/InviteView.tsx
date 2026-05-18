@@ -24,6 +24,12 @@ const SLIDE_BG_FILES = [
 ] as const;
 
 const TOTAL_SLIDES = 6;
+const ENV_W = 280;
+const FLAP_H = 90;
+const BODY_H = 158;
+const ENV_COLOR = "#F9F3E8";
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 // Stable seeded pseudo-random (no hydration mismatch)
 function sr(seed: number, max = 1, min = 0) {
@@ -133,13 +139,9 @@ export default function InviteView({ invite, colors }: InviteViewProps) {
           20%  { opacity: 0.7; }
           100% { transform: translateY(-360px) rotate(120deg) scale(0.3); opacity: 0; }
         }
-        @keyframes sealPulse {
-          0%, 100% { box-shadow: 0 0 0 0 var(--seal-glow); }
-          50%       { box-shadow: 0 0 0 18px transparent; }
-        }
-        @keyframes shimmer {
-          0%   { background-position: -200% center; }
-          100% { background-position:  200% center; }
+        @keyframes sealBreath {
+          0%, 100% { transform: scale(1); }
+          50%       { transform: scale(1.06); }
         }
       `}</style>
 
@@ -281,7 +283,7 @@ export default function InviteView({ invite, colors }: InviteViewProps) {
                 exit={{ opacity: 0, scale: 1.06, filter: "blur(6px)" }}
                 transition={{ duration: 0.75, ease: [0.32, 0.72, 0, 1] }}
               >
-                <EntrySeal
+                <EnvelopeEntry
                   invite={invite}
                   colors={colors}
                   onOpen={() => setOpened(true)}
@@ -295,9 +297,11 @@ export default function InviteView({ invite, colors }: InviteViewProps) {
   );
 }
 
-// ── Entry seal screen ──────────────────────────────────────────────────────────
+// ── Envelope entry screen ─────────────────────────────────────────────────────
 
-function EntrySeal({
+type EnvPhase = "idle" | "opening" | "cardOut";
+
+function EnvelopeEntry({
   invite,
   colors,
   onOpen,
@@ -306,195 +310,245 @@ function EntrySeal({
   colors: CustomColors;
   onOpen: () => void;
 }) {
-  const [tapped, setTapped] = useState(false);
+  const [phase, setPhase] = useState<EnvPhase>("idle");
 
-  function handleTap() {
-    if (tapped) return;
-    setTapped(true);
-    setTimeout(onOpen, 120);
+  async function handleTap() {
+    if (phase !== "idle") return;
+    // 1. Flap lifts + shimmer
+    setPhase("opening");
+    await sleep(820);
+    // 2. Card rises out
+    setPhase("cardOut");
+    await sleep(1000);
+    // 3. Hand off
+    onOpen();
   }
 
-  const initials =
-    (invite.bride_name?.[0] ?? "") + "&" + (invite.groom_name?.[0] ?? "");
+  const initials = (invite.bride_name?.[0] ?? "") + (invite.groom_name?.[0] ?? "");
+  const displayDate = new Date(invite.event_date).toLocaleDateString("en-IN", {
+    day: "numeric", month: "long", year: "numeric",
+  });
 
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-between py-16 px-8">
-      {/* Background — photo or gradient */}
-      {invite.photo_1_url ? (
-        <img
-          src={invite.photo_1_url}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-      ) : (
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `radial-gradient(ellipse at 40% 30%, ${colors.primary}55 0%, transparent 60%),
-              linear-gradient(160deg, ${colors.accent} 0%, #0B0F19 65%)`,
-          }}
-        />
-      )}
-
-      {/* Heavy dark overlay */}
+    <div
+      className="absolute inset-0 flex flex-col items-center justify-center gap-7"
+      style={{ background: "#0B0F19", cursor: phase === "idle" ? "pointer" : "default" }}
+      onClick={phase === "idle" ? handleTap : undefined}
+    >
+      {/* Radial glow */}
       <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.65) 100%)",
-        }}
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: `radial-gradient(ellipse at 50% 48%, ${colors.primary}1A 0%, transparent 68%)` }}
       />
 
-      {/* Top — studio mark */}
+      {/* Floating hearts */}
+      <FloatingParticles slideIndex={0} colors={colors} />
+
+      {/* Names above envelope */}
       <motion.div
-        initial={{ opacity: 0, y: -14 }}
+        initial={{ opacity: 0, y: -18 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, delay: 0.15 }}
-        className="relative z-10 flex flex-col items-center gap-1"
+        transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10 text-center px-8"
       >
-        <p className="text-[9px] tracking-[0.5em] uppercase" style={{ color: colors.primary }}>
+        <p className="text-[9px] tracking-[0.5em] uppercase mb-3" style={{ color: colors.primary }}>
           Wedding Invitation
+        </p>
+        <h1
+          className="font-bold text-white"
+          style={{ fontFamily: "Georgia, serif", fontSize: "clamp(1.8rem, 7.5vw, 2.6rem)", lineHeight: 1.1 }}
+        >
+          {invite.bride_name}
+          <span
+            className="italic font-normal"
+            style={{ color: colors.primary, fontSize: "0.7em", margin: "0 0.4em" }}
+          >
+            &amp;
+          </span>
+          {invite.groom_name}
+        </h1>
+        <p className="mt-2 text-xs" style={{ fontFamily: "Georgia, serif", color: "rgba(255,255,255,0.45)" }}>
+          {displayDate}
         </p>
       </motion.div>
 
-      {/* Center — names */}
-      <div className="relative z-10 flex flex-col items-center text-center">
-        <motion.h1
-          initial={{ opacity: 0, y: 22 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.75, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          style={{ fontFamily: "Georgia, serif", fontSize: "clamp(2.8rem, 11vw, 4rem)", lineHeight: 1.05 }}
-          className="font-bold text-white"
-        >
-          {invite.bride_name}
-        </motion.h1>
-
-        <motion.span
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.55, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="block my-2 italic font-normal"
-          style={{ fontFamily: "Georgia, serif", fontSize: "clamp(1.6rem, 6.5vw, 2.4rem)", color: colors.primary }}
-        >
-          &amp;
-        </motion.span>
-
-        <motion.h1
-          initial={{ opacity: 0, y: 22 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.75, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          style={{ fontFamily: "Georgia, serif", fontSize: "clamp(2.8rem, 11vw, 4rem)", lineHeight: 1.05 }}
-          className="font-bold text-white"
-        >
-          {invite.groom_name}
-        </motion.h1>
-
-        <motion.div
-          initial={{ opacity: 0, scaleX: 0 }}
-          animate={{ opacity: 1, scaleX: 1 }}
-          transition={{ duration: 0.5, delay: 0.65 }}
-          className="mt-5 mb-4 flex items-center gap-3"
-        >
-          <div className="h-px w-14" style={{ background: colors.primary, opacity: 0.45 }} />
-          <Heart className="h-3 w-3" style={{ color: colors.primary }} fill="currentColor" />
-          <div className="h-px w-14" style={{ background: colors.primary, opacity: 0.45 }} />
-        </motion.div>
-
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.75, duration: 0.6 }}
-          className="text-sm"
-          style={{ fontFamily: "Georgia, serif", color: "rgba(255,255,255,0.65)" }}
-        >
-          {new Date(invite.event_date).toLocaleDateString("en-IN", {
-            day: "numeric", month: "long", year: "numeric",
-          })}
-        </motion.p>
-      </div>
-
-      {/* Bottom — wax seal tap button */}
+      {/* ── Envelope ── */}
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
-        className="relative z-10 flex flex-col items-center gap-4"
+        initial={{ opacity: 0, y: 28, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.75, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10"
+        style={{ width: ENV_W, height: FLAP_H + BODY_H }}
       >
-        <button
-          onClick={handleTap}
-          className="relative flex items-center justify-center active:scale-95 transition-transform duration-150"
-          style={{ width: 110, height: 110 }}
-          aria-label="Open invitation"
-        >
-          {/* Rotating ring with text */}
+        {/* ── Light shimmer — sweeps on open ── */}
+        {phase !== "idle" && (
           <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
-            className="absolute inset-0"
-          >
-            <svg viewBox="0 0 110 110" width="110" height="110">
-              <defs>
-                <path
-                  id="seal-circle"
-                  d="M55,12 a43,43 0 1,1 -0.01,0"
-                  fill="none"
-                />
-              </defs>
-              <text
-                fontSize="8.5"
-                fontWeight="600"
-                letterSpacing="3.2"
-                style={{ fill: colors.primary, fontFamily: "Georgia, serif" }}
-              >
-                <textPath href="#seal-circle">
-                  TAP TO OPEN · TAP TO OPEN · &nbsp;
-                </textPath>
-              </text>
-            </svg>
-          </motion.div>
-
-          {/* Inner seal disc */}
-          <motion.div
-            animate={{ scale: [1, 1.04, 1] }}
-            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-            className="relative flex flex-col items-center justify-center rounded-full"
+            className="absolute pointer-events-none"
             style={{
-              width: 72,
-              height: 72,
-              background: `${colors.primary}22`,
-              border: `1.5px solid ${colors.primary}`,
-              "--seal-glow": `${colors.primary}55`,
-              animation: "sealPulse 2.4s ease-in-out infinite",
-            } as React.CSSProperties}
+              top: 0, bottom: 0, left: 0, width: "40%", zIndex: 30,
+              background:
+                "linear-gradient(108deg, transparent 10%, rgba(255,255,255,0.6) 50%, transparent 90%)",
+              borderRadius: 4,
+            }}
+            initial={{ x: -ENV_W * 0.5 }}
+            animate={{ x: ENV_W * 1.8 }}
+            transition={{ duration: 0.58, delay: 0.1, ease: "easeOut" }}
+          />
+        )}
+
+        {/* ── Flap — 3D opens backward ── */}
+        <div style={{ perspective: 900, perspectiveOrigin: "center top", position: "absolute", top: 0, width: ENV_W, zIndex: 10 }}>
+          <motion.div
+            animate={{ rotateX: phase !== "idle" ? -175 : 0 }}
+            transition={{ duration: 0.72, ease: [0.55, 0.05, 0.1, 0.92] }}
+            style={{ transformOrigin: "top center" }}
           >
-            {/* Initials */}
-            <span
+            {/* Flap triangle SVG */}
+            <svg width={ENV_W} height={FLAP_H} viewBox={`0 0 ${ENV_W} ${FLAP_H}`} display="block">
+              <defs>
+                <linearGradient id="flapGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={ENV_COLOR} />
+                  <stop offset="100%" stopColor="#EDE4D4" />
+                </linearGradient>
+              </defs>
+              <polygon points={`0,0 ${ENV_W},0 ${ENV_W / 2},${FLAP_H}`} fill="url(#flapGrad)" />
+              {/* Fold crease lines */}
+              <line x1="0" y1="0" x2={ENV_W / 2} y2={FLAP_H}
+                stroke={colors.primary} strokeWidth="0.8" strokeOpacity="0.22" />
+              <line x1={ENV_W} y1="0" x2={ENV_W / 2} y2={FLAP_H}
+                stroke={colors.primary} strokeWidth="0.8" strokeOpacity="0.22" />
+              {/* Outer border */}
+              <polyline points={`0,0 ${ENV_W},0 ${ENV_W / 2},${FLAP_H}`}
+                fill="none" stroke={colors.primary} strokeWidth="1.1" strokeOpacity="0.38" />
+            </svg>
+
+            {/* Wax seal — breaks on open */}
+            <motion.div
+              animate={phase !== "idle" ? { scale: 1.4, opacity: 0 } : { scale: 1, opacity: 1 }}
+              transition={{ duration: 0.22, ease: "easeIn" }}
               style={{
-                fontFamily: "Georgia, serif",
-                fontSize: 18,
-                fontWeight: 700,
-                color: colors.primary,
-                letterSpacing: "0.05em",
-                lineHeight: 1,
+                position: "absolute",
+                bottom: 8,
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: 42, height: 42, borderRadius: "50%",
+                background: colors.primary,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: `0 0 0 2.5px ${ENV_COLOR}, 0 2px 10px rgba(0,0,0,0.3)`,
+                animation: "sealBreath 2.6s ease-in-out infinite",
               }}
             >
-              {initials}
-            </span>
+              <span style={{
+                fontFamily: "Georgia, serif", fontSize: 12,
+                fontWeight: 700, color: "#0B0F19", letterSpacing: "0.03em",
+              }}>
+                {initials}
+              </span>
+            </motion.div>
           </motion.div>
-        </button>
+        </div>
 
-        <motion.p
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-          className="text-[10px] tracking-[0.3em] uppercase"
-          style={{ color: "rgba(255,255,255,0.5)" }}
+        {/* ── Envelope body ── */}
+        <div
+          style={{
+            position: "absolute",
+            top: FLAP_H,
+            width: ENV_W, height: BODY_H,
+            background: ENV_COLOR,
+            border: `1.2px solid ${colors.primary}40`,
+            borderTop: "none",
+            borderRadius: "0 0 6px 6px",
+            zIndex: 2,
+            overflow: "hidden",
+          }}
         >
-          Touch to open
-        </motion.p>
+          {/* Fold crease lines inside body */}
+          <svg width={ENV_W} height={BODY_H} style={{ position: "absolute", inset: 0 }}>
+            <line x1="0" y1="0" x2={ENV_W / 2} y2={BODY_H * 0.5}
+              stroke={colors.primary} strokeWidth="0.7" strokeOpacity="0.18" />
+            <line x1={ENV_W} y1="0" x2={ENV_W / 2} y2={BODY_H * 0.5}
+              stroke={colors.primary} strokeWidth="0.7" strokeOpacity="0.18" />
+            <line x1="0" y1={BODY_H} x2={ENV_W / 2} y2={BODY_H * 0.5}
+              stroke={colors.primary} strokeWidth="0.7" strokeOpacity="0.18" />
+            <line x1={ENV_W} y1={BODY_H} x2={ENV_W / 2} y2={BODY_H * 0.5}
+              stroke={colors.primary} strokeWidth="0.7" strokeOpacity="0.18" />
+          </svg>
+        </div>
+
+        {/* ── Invitation card — rises from inside ── */}
+        {/* z-index 5 keeps card above body (z=2) but below flap perspective wrapper.
+            Card is sibling to body, so body's overflow:hidden does NOT clip it. */}
+        <motion.div
+          animate={
+            phase === "cardOut"
+              ? { y: -(FLAP_H + BODY_H + 72), opacity: 1 }
+              : { y: 0, opacity: 0 }
+          }
+          transition={
+            phase === "cardOut"
+              ? { y: { duration: 0.88, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.28 } }
+              : { duration: 0 }
+          }
+          style={{
+            position: "absolute",
+            top: FLAP_H + 10,
+            left: 12, right: 12,
+            height: BODY_H - 18,
+            background: "#FFFFFF",
+            borderRadius: 4,
+            border: `1px solid ${colors.primary}30`,
+            zIndex: 5,
+            display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            textAlign: "center", padding: "16px 18px",
+            boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
+          }}
+        >
+          <div style={{ width: 36, height: 1, background: colors.primary, opacity: 0.45, marginBottom: 14 }} />
+          <p style={{ fontFamily: "Georgia, serif", fontSize: 19, fontWeight: 700, color: "#1C1C1E", lineHeight: 1.15 }}>
+            {invite.bride_name}
+          </p>
+          <p style={{ fontFamily: "Georgia, serif", fontSize: 13, color: colors.primary, margin: "5px 0", fontStyle: "italic" }}>
+            &amp;
+          </p>
+          <p style={{ fontFamily: "Georgia, serif", fontSize: 19, fontWeight: 700, color: "#1C1C1E", lineHeight: 1.15 }}>
+            {invite.groom_name}
+          </p>
+          <div style={{ width: 36, height: 1, background: colors.primary, opacity: 0.45, margin: "14px 0 10px" }} />
+          <p style={{ fontSize: 8, letterSpacing: "0.28em", textTransform: "uppercase", color: colors.primary }}>
+            {displayDate}
+          </p>
+        </motion.div>
       </motion.div>
 
-      {/* Floating hearts on entry screen too */}
-      <FloatingParticles slideIndex={0} colors={colors} />
+      {/* Touch hint */}
+      {phase === "idle" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.1, duration: 0.6 }}
+          className="relative z-10 flex flex-col items-center gap-2 pointer-events-none"
+        >
+          <motion.div
+            animate={{ y: [0, -5, 0], scale: [1, 1.08, 1] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+              <path d="M9 11V6a2 2 0 1 1 4 0v5" stroke={colors.primary} strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M13 11V9a2 2 0 1 1 4 0v6a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6v-2a2 2 0 1 1 4 0"
+                stroke={colors.primary} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </motion.div>
+          <motion.p
+            animate={{ opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+            className="text-[10px] tracking-[0.35em] uppercase"
+            style={{ color: "rgba(255,255,255,0.5)" }}
+          >
+            Touch to open
+          </motion.p>
+        </motion.div>
+      )}
     </div>
   );
 }
