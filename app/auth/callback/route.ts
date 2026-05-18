@@ -7,6 +7,14 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/admin/dashboard";
 
+  // Supabase sends errors back as query params when a link is invalid/expired
+  const supabaseError = searchParams.get("error");
+  const errorCode = searchParams.get("error_code");
+  if (supabaseError) {
+    const params = new URLSearchParams({ error: errorCode ?? supabaseError });
+    return NextResponse.redirect(`${origin}/login?${params}`);
+  }
+
   if (code) {
     const cookieStore = await cookies();
     const supabase = createServerClient(
@@ -30,6 +38,8 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`);
     }
+    const params = new URLSearchParams({ error: error.code ?? "auth_failed" });
+    return NextResponse.redirect(`${origin}/login?${params}`);
   }
 
   return NextResponse.redirect(`${origin}/login?error=auth_failed`);

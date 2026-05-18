@@ -1,14 +1,28 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Camera, Mail, ArrowRight, Loader2 } from "lucide-react";
+import { Camera, Mail, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 
-export default function LoginPage() {
+const ERROR_MESSAGES: Record<string, string> = {
+  otp_expired: "This magic link has expired. Links are valid for 60 minutes — please request a new one.",
+  otp_disabled: "Magic link sign-in is currently disabled. Contact support.",
+  access_denied: "Sign-in was denied. Please request a new link.",
+  auth_failed: "Sign-in failed. Please try again.",
+};
+
+import { Suspense } from "react";
+
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const errorCode = searchParams.get("error");
+  const errorMessage = errorCode ? (ERROR_MESSAGES[errorCode] ?? ERROR_MESSAGES.auth_failed) : null;
+
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -99,6 +113,13 @@ export default function LoginPage() {
                 Enter your email to receive a magic link.
               </p>
 
+              {errorMessage && (
+                <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                  <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" />
+                  <p className="text-sm text-red-700 leading-snug">{errorMessage}</p>
+                </div>
+              )}
+
               <form onSubmit={handleLogin} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-charcoal font-medium">
@@ -167,5 +188,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
