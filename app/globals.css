@@ -1,26 +1,186 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-heading);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+
+  /* 2soulfilms brand tokens */
+  --color-ink: var(--ink);
+  --color-ivory: var(--ivory);
+  --color-champagne: var(--champagne);
+  --color-blush: var(--blush);
+  --color-warm-gray: var(--warm-gray);
+
+  /* Legacy tokens (admin panel still uses these) */
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-charcoal: var(--charcoal);
+  --color-charcoal-2: var(--charcoal-2);
+  --color-cream: var(--cream);
+  --color-rose: var(--rose);
+  --color-rose-light: var(--rose-light);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* shadcn base — mapped to 2soulfilms palette */
+  --background: #F8F4EE;
+  --foreground: #0B0F19;
+  --card: #FFFFFF;
+  --card-foreground: #0B0F19;
+  --popover: #FFFFFF;
+  --popover-foreground: #0B0F19;
+  --primary: #CBB89E;
+  --primary-foreground: #0B0F19;
+  --secondary: #E7D4C8;
+  --secondary-foreground: #0B0F19;
+  --muted: #F0EBE3;
+  --muted-foreground: #2F3A4B;
+  --accent: #E7D4C8;
+  --accent-foreground: #0B0F19;
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: #E0D8CE;
+  --input: #E0D8CE;
+  --ring: #CBB89E;
+  --radius: 0.5rem;
+
+  /* Admin sidebar (dark) */
+  --sidebar: #0B0F19;
+  --sidebar-foreground: #F8F4EE;
+  --sidebar-primary: #CBB89E;
+  --sidebar-primary-foreground: #0B0F19;
+  --sidebar-accent: #1A2030;
+  --sidebar-accent-foreground: #F8F4EE;
+  --sidebar-border: #1E2535;
+  --sidebar-ring: #CBB89E;
+
+  /* 2soulfilms brand colors */
+  --ink:         #0B0F19;   /* primary text, navbar */
+  --ivory:       #F8F4EE;   /* page background */
+  --champagne:   #CBB89E;   /* primary CTA accent */
+  --blush:       #E7D4C8;   /* secondary accent, hover bg */
+  --warm-gray:   #2F3A4B;   /* secondary text, metadata */
+
+  /* Legacy: admin panel */
+  --gold:        #C9A84C;
+  --gold-light:  #F5E8C0;
+  --charcoal:    #0B0F19;
+  --charcoal-2:  #1A2030;
+  --cream:       #F8F4EE;
+  --rose:        #CBB89E;
+  --rose-light:  #E7D4C8;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
+  html {
+    scroll-behavior: smooth;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ── 2soulfilms utility classes ── */
+.bg-ink        { background-color: var(--ink); }
+.bg-ivory      { background-color: var(--ivory); }
+.bg-champagne  { background-color: var(--champagne); }
+.bg-blush      { background-color: var(--blush); }
+.text-ink      { color: var(--ink); }
+.text-champagne { color: var(--champagne); }
+.text-warm-gray { color: var(--warm-gray); }
+.border-champagne { border-color: var(--champagne); }
+
+/* Legacy utility classes (admin panel) */
+.bg-charcoal   { background-color: var(--ink); }
+.bg-charcoal-2 { background-color: var(--charcoal-2); }
+.bg-gold       { background-color: var(--gold); }
+.bg-gold-light { background-color: var(--gold-light); }
+.bg-cream      { background-color: var(--ivory); }
+.bg-rose       { background-color: var(--rose); }
+.bg-rose-light { background-color: var(--rose-light); }
+.text-gold     { color: var(--champagne); }
+.text-charcoal { color: var(--ink); }
+.text-rose     { color: var(--champagne); }
+.border-gold   { border-color: var(--champagne); }
+
+/* ── Invite page ── */
+.invite-hero-overlay {
+  background: linear-gradient(to bottom, rgba(11,15,25,0.3) 0%, rgba(11,15,25,0.7) 100%);
+}
+.gold-divider {
+  background: linear-gradient(to right, transparent, var(--champagne), transparent);
+  height: 1px;
+  width: 100%;
+}
+.invite-section {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1.5rem;
+}
+
+/* ── Champagne CTA glow ── */
+.btn-champagne {
+  background-color: var(--champagne);
+  color: var(--ink);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-champagne:hover {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 6px 24px rgba(203, 184, 158, 0.45);
+}
+
+/* ── Film card hover ── */
+.film-card {
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.film-card:hover {
+  transform: translateY(-4px) scale(1.015);
+  box-shadow: 0 16px 48px rgba(11, 15, 25, 0.12);
+}
+.film-card:hover .play-overlay {
+  opacity: 1;
+}
+.play-overlay {
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
