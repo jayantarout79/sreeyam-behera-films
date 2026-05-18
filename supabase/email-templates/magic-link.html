@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in — YuktraAI</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F5F0EB;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5F0EB;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
+
+          <!-- ── Top YuktraAI wordmark ──────────────────────────────────── -->
+          <tr>
+            <td align="center" style="padding-bottom:28px;">
+              <span style="font-size:20px;font-weight:800;letter-spacing:0.08em;color:#1A1F2E;text-transform:uppercase;">YUKTRA</span><span style="font-size:20px;font-weight:800;letter-spacing:0.08em;color:#C9A84C;">AI</span>
+            </td>
+          </tr>
+
+          <!-- ── Main card ─────────────────────────────────────────────── -->
+          <tr>
+            <td style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+              <!-- Dark header -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:linear-gradient(135deg,#1A1F2E 0%,#252B3B 100%);padding:40px 40px 36px;text-align:center;">
+
+                    <!-- YuktraAI icon mark -->
+                    <div style="margin-bottom:20px;">
+                      <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="52" height="52" rx="14" fill="#C9A84C" fill-opacity="0.12"/>
+                        <rect width="52" height="52" rx="14" stroke="#C9A84C" stroke-opacity="0.25" stroke-width="1"/>
+                        <!-- Y letterform -->
+                        <path d="M18 16L26 26L34 16" stroke="#C9A84C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M26 26V36" stroke="#C9A84C" stroke-width="2.2" stroke-linecap="round"/>
+                      </svg>
+                    </div>
+
+                    <p style="margin:0 0 6px;font-size:11px;letter-spacing:0.4em;text-transform:uppercase;color:#C9A84C;font-weight:600;">
+                      YuktraAI
+                    </p>
+                    <h1 style="margin:0;font-size:28px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;line-height:1.25;">
+                      Your sign-in link
+                    </h1>
+                    <p style="margin:10px 0 0;font-size:14px;color:rgba(255,255,255,0.45);line-height:1.4;">
+                      Intelligent platforms for creators
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Body -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:36px 40px 32px;">
+
+                    <p style="margin:0 0 8px;font-size:15px;color:#1C1C1E;font-weight:600;line-height:1.4;">
+                      Hello,
+                    </p>
+                    <p style="margin:0 0 32px;font-size:15px;color:#666;line-height:1.7;">
+                      Click the button below to sign in to your dashboard. This link is valid for
+                      <strong style="color:#1C1C1E;">60 minutes</strong> and works only once.
+                    </p>
+
+                    <!-- CTA Button -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
+                      <tr>
+                        <td style="border-radius:10px;background:linear-gradient(135deg,#1A1F2E 0%,#252B3B 100%);box-shadow:0 4px 14px rgba(26,31,46,0.35);">
+                          <a href="{{ .ConfirmationURL }}"
+                            style="display:inline-block;padding:16px 44px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;letter-spacing:0.03em;border-radius:10px;">
+                            Sign in to Dashboard &nbsp;→
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Accent bar -->
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                      <tr>
+                        <td style="border-top:1px solid #F0EDE8;">&nbsp;</td>
+                      </tr>
+                    </table>
+
+                    <!-- Fallback link -->
+                    <p style="margin:0 0 6px;font-size:12px;color:#AAA;line-height:1.5;">
+                      Button not working? Paste this URL into your browser:
+                    </p>
+                    <p style="margin:0;font-size:12px;line-height:1.6;word-break:break-all;">
+                      <a href="{{ .ConfirmationURL }}" style="color:#C9A84C;text-decoration:none;">
+                        {{ .ConfirmationURL }}
+                      </a>
+                    </p>
+
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Security notice -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:#FAFAF8;border-top:1px solid #F0EDE8;border-radius:0 0 16px 16px;padding:18px 40px;">
+                    <p style="margin:0;font-size:12px;color:#BBB;line-height:1.6;">
+                      🔒&nbsp; If you didn't request this, you can safely ignore this email. No action is needed.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- ── Footer ────────────────────────────────────────────────── -->
+          <tr>
+            <td style="padding:28px 24px 16px;text-align:center;">
+
+              <p style="margin:0 0 6px;font-size:12px;color:#BBB;">
+                Built by
+                <span style="font-weight:700;letter-spacing:0.08em;color:#1A1F2E;">YUKTRA</span><span style="font-weight:700;letter-spacing:0.08em;color:#C9A84C;">AI</span>
+                &nbsp;·&nbsp; Intelligent platforms for creators
+              </p>
+              <p style="margin:0;font-size:11px;color:#CCC;">
+                © 2026 YuktraAI. All rights reserved.
+              </p>
+
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

@@ -20,10 +20,12 @@ export default function LoginPage() {
     setLoading(true);
     const supabase = createClient();
 
+    // Use the explicit app URL env var in production, fall back to current origin for local dev
+    const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin;
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${siteUrl}/auth/callback`,
       },
     });
 
