@@ -34,6 +34,16 @@ const values = [
   },
 ];
 
+// City pins over the coverage map — positions as % of the container
+const MAP_PINS = [
+  { name: "Bhubaneswar", top: "57%", left: "63%", main: true,  delay: 0    },
+  { name: "Delhi",       top: "28%", left: "42%", main: false, delay: 0.4  },
+  { name: "Mumbai",      top: "55%", left: "24%", main: false, delay: 0.8  },
+  { name: "Kolkata",     top: "46%", left: "70%", main: false, delay: 1.2  },
+  { name: "Bengaluru",   top: "72%", left: "40%", main: false, delay: 1.6  },
+  { name: "Chennai",     top: "74%", left: "52%", main: false, delay: 2.0  },
+];
+
 const stats = [
   { icon: Heart, value: "100+", label: "Happy Couples" },
   { icon: MapPin, value: "20+", label: "Cities Covered" },
@@ -65,91 +75,6 @@ function FloralWatermark() {
   );
 }
 
-// India map SVG with location pins
-function IndiaMap() {
-  return (
-    <svg
-      viewBox="0 0 340 420"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="w-full h-full"
-    >
-      {/* India outline — simplified but recognizable */}
-      <path
-        d="M170 18
-           L188 22 L205 28 L220 36 L234 46 L242 58 L248 70
-           L258 78 L268 82 L275 90 L272 102 L278 112 L282 124
-           L280 136 L276 148 L268 158 L272 170 L270 182
-           L262 194 L252 204 L258 216 L256 228 L248 240
-           L238 252 L228 264 L218 276 L210 288 L204 302
-           L198 316 L192 330 L186 344 L180 358 L174 370
-           L170 380
-           L166 370 L160 358 L154 344 L148 330 L142 316
-           L136 302 L130 288 L122 276 L112 264 L102 252
-           L92 240 L84 228 L82 216 L88 204 L78 194
-           L70 182 L68 170 L72 158 L64 148 L60 136
-           L58 124 L62 112 L68 102 L65 90 L72 82
-           L82 78 L92 70 L98 58 L112 46 L126 36
-           L141 28 L158 22 Z"
-        stroke="#CBB89E"
-        strokeWidth="1.2"
-        fill="rgba(203,184,158,0.06)"
-        strokeLinejoin="round"
-      />
-      {/* North-east bump */}
-      <path
-        d="M258 78 L272 65 L285 60 L295 68 L290 80 L278 82 L272 90"
-        stroke="#CBB89E"
-        strokeWidth="1.2"
-        fill="rgba(203,184,158,0.04)"
-        strokeLinejoin="round"
-      />
-      {/* Punjab/Kashmir area */}
-      <path
-        d="M170 18 L188 10 L198 18 L205 28"
-        stroke="#CBB89E"
-        strokeWidth="1"
-        fill="none"
-      />
-
-      {/* Location pin — Bhubaneswar (main, larger) */}
-      <g transform="translate(218,222)">
-        <circle cx="0" cy="0" r="5" fill="#CBB89E" />
-        <circle cx="0" cy="0" r="8" stroke="#CBB89E" strokeWidth="1" fill="none" opacity="0.4" />
-      </g>
-
-      {/* Delhi */}
-      <g transform="translate(158,115)">
-        <circle cx="0" cy="0" r="3.5" fill="#CBB89E" opacity="0.65" />
-        <circle cx="0" cy="0" r="6" stroke="#CBB89E" strokeWidth="0.8" fill="none" opacity="0.3" />
-      </g>
-
-      {/* Mumbai */}
-      <g transform="translate(110,210)">
-        <circle cx="0" cy="0" r="3.5" fill="#CBB89E" opacity="0.65" />
-        <circle cx="0" cy="0" r="6" stroke="#CBB89E" strokeWidth="0.8" fill="none" opacity="0.3" />
-      </g>
-
-      {/* Bengaluru */}
-      <g transform="translate(162,285)">
-        <circle cx="0" cy="0" r="3.5" fill="#CBB89E" opacity="0.65" />
-        <circle cx="0" cy="0" r="6" stroke="#CBB89E" strokeWidth="0.8" fill="none" opacity="0.3" />
-      </g>
-
-      {/* Kolkata */}
-      <g transform="translate(238,178)">
-        <circle cx="0" cy="0" r="3.5" fill="#CBB89E" opacity="0.65" />
-        <circle cx="0" cy="0" r="6" stroke="#CBB89E" strokeWidth="0.8" fill="none" opacity="0.3" />
-      </g>
-
-      {/* Chennai */}
-      <g transform="translate(200,298)">
-        <circle cx="0" cy="0" r="3.5" fill="#CBB89E" opacity="0.65" />
-        <circle cx="0" cy="0" r="6" stroke="#CBB89E" strokeWidth="0.8" fill="none" opacity="0.3" />
-      </g>
-    </svg>
-  );
-}
 
 export default function AboutPage() {
   return (
@@ -190,11 +115,12 @@ export default function AboutPage() {
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.9, delay: 0.2 }}
-              className="relative hidden lg:block h-[420px]"
+              className="hidden lg:flex h-[420px] gap-3"
             >
-              <div className="absolute left-0 top-0 w-[58%] h-full rounded-2xl overflow-hidden border border-[#E2D9CE]">
+              {/* Large main image */}
+              <div className="relative flex-[3] rounded-2xl overflow-hidden border border-[#E2D9CE]">
                 <Image
-                  src="/photos/couple-golden.png"
+                  src="/photos/whoweare1.png"
                   alt="Wedding couple"
                   fill
                   className="object-cover object-center"
@@ -202,23 +128,17 @@ export default function AboutPage() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F19]/20 to-transparent" />
               </div>
-              <div className="absolute right-0 top-0 w-[40%] h-[48%] rounded-2xl overflow-hidden border border-[#E2D9CE]">
-                <Image
-                  src="/photos/wedding-ceremony.png"
-                  alt="Wedding ceremony"
-                  fill
-                  className="object-cover object-top"
-                  sizes="20vw"
-                />
-              </div>
-              <div className="absolute right-0 bottom-0 w-[40%] h-[48%] rounded-2xl overflow-hidden border border-[#E2D9CE]">
-                <Image
-                  src="/photos/couple-meera-rohan.png"
-                  alt="Couple portrait"
-                  fill
-                  className="object-cover object-top"
-                  sizes="20vw"
-                />
+              {/* 3 stacked images on the right */}
+              <div className="flex-[2] flex flex-col gap-3">
+                <div className="relative flex-1 rounded-2xl overflow-hidden border border-[#E2D9CE]">
+                  <Image src="/photos/whoweare2.png" alt="Wedding moment" fill className="object-cover object-center" sizes="20vw" />
+                </div>
+                <div className="relative flex-1 rounded-2xl overflow-hidden border border-[#E2D9CE]">
+                  <Image src="/photos/whoweare3.png" alt="Wedding moment" fill className="object-cover object-center" sizes="20vw" />
+                </div>
+                <div className="relative flex-1 rounded-2xl overflow-hidden border border-[#E2D9CE]">
+                  <Image src="/photos/whoweare4.png" alt="Wedding moment" fill className="object-cover object-center" sizes="20vw" />
+                </div>
               </div>
             </motion.div>
           </div>
@@ -337,10 +257,58 @@ export default function AboutPage() {
               transition={{ duration: 0.7 }}
               className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16"
             >
-              {/* India map */}
+              {/* Coverage map with animated city pins */}
               <div className="hidden lg:flex items-center justify-center">
-                <div className="w-72 h-[360px]">
-                  <IndiaMap />
+                <div className="relative w-72 h-[360px] bg-[#F8F4EE]">
+                  <Image
+                    src="/photos/coveragemap.png"
+                    alt="India coverage map"
+                    fill
+                    className="object-contain mix-blend-multiply"
+                    sizes="288px"
+                  />
+                  {MAP_PINS.map(({ name, top, left, main, delay }) => (
+                    <div
+                      key={name}
+                      className="absolute"
+                      style={{ top, left, transform: "translate(-50%, -50%)" }}
+                    >
+                      {/* Outer pulse ring */}
+                      <motion.div
+                        className="absolute rounded-full border border-champagne/50"
+                        style={{
+                          width: main ? 36 : 24,
+                          height: main ? 36 : 24,
+                          top: "50%", left: "50%",
+                          transform: "translate(-50%, -50%)",
+                        }}
+                        animate={{ scale: [1, 2.2, 1], opacity: [0.7, 0, 0.7] }}
+                        transition={{ duration: 2.4, delay, repeat: Infinity, ease: "easeOut" }}
+                      />
+                      {/* Inner pulse ring (offset timing) */}
+                      <motion.div
+                        className="absolute rounded-full border border-champagne/30"
+                        style={{
+                          width: main ? 24 : 16,
+                          height: main ? 24 : 16,
+                          top: "50%", left: "50%",
+                          transform: "translate(-50%, -50%)",
+                        }}
+                        animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }}
+                        transition={{ duration: 2.4, delay: delay + 0.5, repeat: Infinity, ease: "easeOut" }}
+                      />
+                      {/* Dot */}
+                      <div
+                        className={`rounded-full ${main ? "w-3 h-3 bg-champagne shadow-[0_0_8px_2px_rgba(203,184,158,0.6)]" : "w-2 h-2 bg-champagne/80"}`}
+                      />
+                      {/* Label for main city only */}
+                      {main && (
+                        <span className="absolute top-4 left-1/2 -translate-x-1/2 text-[8px] tracking-[0.3em] uppercase text-champagne whitespace-nowrap font-semibold">
+                          Bhubaneswar
+                        </span>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -55,24 +56,18 @@ export default function Navbar() {
         <div className="px-6 lg:px-8 h-[58px] flex items-center justify-between gap-6">
 
           {/* Logo */}
-          <Link href="/" aria-label="2soulfilms home" className="flex flex-col leading-none flex-shrink-0 group">
-            <span
+          <Link href="/" aria-label="2soulfilms home" className="flex-shrink-0">
+            <Image
+              src="/photos/logo.png"
+              alt="2soulfilms"
+              width={120}
+              height={40}
               className={cn(
-                "font-bold tracking-tight transition-colors leading-none",
-                isIvory ? "text-[#0B0F19]" : "text-white"
+                "h-14 w-auto transition-all duration-500 object-contain",
+                isIvory ? "" : "brightness-0 invert"
               )}
-              style={{ fontFamily: "var(--font-heading)", fontSize: "1.1rem" }}
-            >
-              2soulfilms
-            </span>
-            <span
-              className={cn(
-                "text-[7px] tracking-[0.28em] uppercase mt-0.5 transition-colors",
-                isIvory ? "text-[#9B8E82]" : "text-white/35"
-              )}
-            >
-              Wedding Films
-            </span>
+              priority
+            />
           </Link>
 
           {/* Desktop nav */}

@@ -6,15 +6,14 @@ import { motion } from "framer-motion";
 import { Play } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 
-// Warm-toned photos that complement each other
 const SIDE_PHOTOS = [
-  { src: "/photos/bride-portrait.png",      alt: "Bride portrait",     pos: "center top" },
-  { src: "/photos/couple-intimate.png",     alt: "Couple intimate",    pos: "center center" },
-  { src: "/photos/couple-meera-rohan.png",  alt: "Couple golden hour", pos: "center top" },
+  { src: "/photos/heroimage1.jpg", alt: "Wedding moment",  pos: "center top" },
+  { src: "/photos/heroimage2.jpg", alt: "Couple portrait", pos: "center center" },
+  { src: "/photos/heroimage3.jpg", alt: "Golden hour",     pos: "center top" },
 ];
 
-const HERO_BG   = "/photos/couple-golden.png";
-const VIDEO_SRC = "/videos/YTDown_YouTube_Nua-Nua-Prema-Motion-Poster-2-New-Romant_Media_zTx_rZ43yE0_001_1080p.mp4";
+const HERO_BG = "/photos/heroimage1.jpg";
+const VIDEO_SRC = "/videos/herovideo.mp4";
 
 export default function HeroSection() {
   const videoRef    = useRef<HTMLVideoElement>(null);
