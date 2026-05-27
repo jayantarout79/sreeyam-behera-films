@@ -21,12 +21,31 @@ export const metadata: Metadata = {
   title: "2soulfilms — We Make Wedding Stories | Wedding Films",
   description:
     "Beyond The Destination, You Can Always Memorize. Cinematic wedding films by 2soulfilms. Serving couples all over India.",
+  icons: {
+    icon: "/icon.png",
+    apple: "/icon.png",
+  },
   openGraph: {
     title: "2soulfilms — We Make Wedding Stories",
     description:
       "Beyond The Destination, You Can Always Memorize. Cinematic wedding films serving all of India.",
     type: "website",
     siteName: "2soulfilms",
+    url: "https://www.2soulfilms.com",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 800,
+        alt: "2soulfilms — Cinematic Wedding Films",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "2soulfilms — We Make Wedding Stories",
+    description: "Beyond The Destination, You Can Always Memorize.",
+    images: ["/og-image.jpg"],
   },
   keywords: [
     "wedding films",
